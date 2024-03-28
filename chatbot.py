@@ -2,71 +2,94 @@ import random
 import json
 import pickle
 import numpy as np
+import tensorflow as tf
 import nltk
-
-
 from nltk.stem import WordNetLemmatizer
 from keras.models import load_model
+import langid
+from googletrans import Translator
 
 
+# Load necessary resources
 lemmatizer = WordNetLemmatizer()
-intents = json.loads(open('intents.json').read())
+model = load_model('.venv/chatbot_motivational.h5')
+translator = Translator()
 
 
-words = pickle.load(open('words.pkl', 'rb'))
-classes = pickle.load(open('classes.pkl', 'rb'))
-model = load_model('chatbot_motivational.h5')
+# Load intents based on language
+def load_intents(language):
+   filename = f'intents_{language}.json'
+   try:
+       with open(filename, 'r', encoding='utf-8') as file:
+           intents = json.load(file)
+       return intents
+   except FileNotFoundError:
+       print(f"Intents file for {language} not found.")
+       return None
 
 
+# Preprocess input text
+def preprocess_input(input_text):
+   tokens = nltk.word_tokenize(input_text)
+   lemmatized_tokens = [lemmatizer.lemmatize(word.lower()) for word in tokens]
+   return lemmatized_tokens
 
 
+# Get response from the model
+def get_response(input_text, lang):
+   input_text = input_text.lower()
+   processed_input = preprocess_input(input_text)
 
 
-def clean_up_sentence(sentence):
-   sentence_words = nltk.word_tokenize(sentence)
-   sentence_words = [lemmatizer.lemmatize(word) for word in sentence_words]
-   return sentence_words
+   # Translate non-English input to English
+   if lang != 'en':
+       translated_text = translator.translate(input_text, src=lang, dest='en').text
+       processed_input = preprocess_input(translated_text)
 
 
-def bag_of_words (sentence):
-   sentence_words = clean_up_sentence(sentence)
+   # Generate model input
    bag = [0] * len(words)
-   for w in sentence_words:
+   for w in processed_input:
        for i, word in enumerate(words):
            if word == w:
                bag[i] = 1
-   return np.array(bag)
 
 
-def predict_class (sentence):
-   bow = bag_of_words (sentence)
-   res = model.predict(np.array([bow]))[0]
-   ERROR_THRESHOLD = 0.25
-   results = [[i, r] for i, r in enumerate(res) if r > ERROR_THRESHOLD]
+   # Get prediction from model
+   results = model.predict(np.array([bag]))[0]
+   results_index = np.argmax(results)
+   tag = classes[results_index]
 
 
-   results.sort(key=lambda x: x[1], reverse=True)
-   return_list = []
-   for r in results:
-       return_list.append({'intent': classes [r[0]], 'probability': str(r[1])})
-   return return_list
+   # Retrieve response based on tag
+   for intent in intents['intents']:
+       if intent['tag'] == tag:
+           responses = intent['responses']
+           return random.choice(responses)
 
 
-def get_response(intents_list, intents_json):
-   tag = intents_list[0]['intent']
-   list_of_intents = intents_json['intents']
-   for i in list_of_intents:
-       if i['tag'] == tag:
-           result = random.choice (i['responses'])
-           break
-   return result
-
-
-print("GO! Bot is running!")
-
-
+# Main code
 while True:
-   message = input("")
-   ints = predict_class (message)
-   res = get_response (ints, intents)
-   print (res)
+   input_text = input("You: ")
+
+
+   # Detect language using langid
+   detected_lang = langid.classify(input_text)[0]
+
+
+   # Map language codes to supported languages
+   lang_map = {'en': 'English', 'hi': 'Hindi', 'sa': 'Sanskrit', 'fr': 'French'}
+
+
+   if detected_lang in lang_map:
+       print(f"Detected language: {lang_map[detected_lang]}")
+       intents = load_intents(detected_lang)
+       if intents:
+           words = pickle.load(open('.venv/words.pkl', 'rb'))
+           classes = pickle.load(open('.venv/classes.pkl', 'rb'))
+
+
+           response = get_response(input_text, detected_lang)
+           print("ChatBot:", response)
+   else:
+       print("Unsupported language")

@@ -29,7 +29,7 @@ words = sorted(set(words))
 
 classes = sorted(set(classes))
 
-pickle.dump(words, open('words.pkl', 'wb'))
+pickle.dump(words, open('.venv/words.pkl', 'wb'))
 pickle.dump(classes, open('classes.pkl', 'wb'))
 
 training = []
@@ -53,9 +53,6 @@ training = np.array(training)
 
 trainX = training[:, :len(words)]
 trainY = training[:, len(words):]
-
-
-
 
 model = tf.keras.Sequential()
 model.add(tf.keras.layers.Dense(128, input_shape=(len(trainX[0]),), activation = 'relu'))

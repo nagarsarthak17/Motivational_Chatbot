@@ -1,0 +1,19 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["Salut", "Bonjour", "Coucou", "Hello", "Salutations"],
+      "responses": ["Bonjour ! Comment puis-je vous aider ?", "Salut ! Que puis-je faire pour vous ?"]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["Au revoir", "À bientôt", "À la prochaine", "Adieu", "Ciao"],
+      "responses": ["Au revoir ! Passez une bonne journée !", "À bientôt !"]
+    },
+    {
+      "tag": "thanks",
+      "patterns": ["Merci", "Merci beaucoup", "Je vous remercie", "C'est utile", "Super, merci"],
+      "responses": ["Je vous en prie !", "De rien !"]
+    }
+  ]
+}
